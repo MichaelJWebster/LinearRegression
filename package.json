@@ -10,10 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/michaelw/LinearRegression.git"
+    "url": "git://github.com/MichaelJWebster/LinearRegression.git"
   },
   "bugs": {
-    "url": "https://github.com/michaelw/LinearRegression/issues"
+    "url": "https://github.com/MichaelJWebster/LinearRegression/issues"
   },
   "licenses": [
     {
