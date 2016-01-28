@@ -80,12 +80,11 @@ class linReg(object):
         """
         if (self.normalisationType != linReg.NONE):
             if (self.normalisationType == linReg.MINMAX):
-                self.X = linReg.normaliseMinMax(self.X)
+                self.X = self.normaliseMinMax(self.X)
             else:
-                self.X = linReg.normaliseStdDev(self.X)
+                self.X = self.normaliseStdDev(self.X)
 
-    @staticmethod
-    def normaliseMinMax(X):
+    def normaliseMinMax(self, X):
         """
         Return a matrix containing (xi - mu(col))/(max(col) - min(col)) for each
         xi and each column.
@@ -98,22 +97,15 @@ class linReg(object):
             value xi from column j by (xi - mu(j))/(max(j) - min(j)).
         """
         maxX = X.max(0)
-        print("maxX is: %s" % maxX)
         minX = X.min(0)
-        print("minX is: %s" % minX)
         mu = X.mean(0)
-        print("mu is: %s" % mu)
         denom = maxX - minX
-        print("denom == %s" % denom)
-        print("X is:\n%s" % X)
         XSubMu = X - mu
-        print("XSubMu =\n %s" % XSubMu)
         rval = XSubMu/denom
-        print("rval =\n %s" % rval)
+        self.normalise = normaliseMinMax(maxX, minX, mu)
         return rval
 
-    @staticmethod
-    def normaliseStdDev(X):
+    def normaliseStdDev(self, X):
         """
         Return a matrix containing (xi - mu(col))/(sigma(col)) for each
         xi and each column.
@@ -128,6 +120,7 @@ class linReg(object):
         mu = X.mean(0)
         sigma = X.std(0)
         rval = (X - mu)/sigma
+        self.normalise = normaliseSTD(mu, sigma)
         return rval
 
     @staticmethod
@@ -195,6 +188,23 @@ class linReg(object):
             i += 1
         return costVals
 
+    def predict(self, X):
+        normalisedX = self.normalise(X)
+        normalisedX = np.append(np.ones((1,1)), normalisedX, axis=1)
+        return normalisedX.dot(self.theta).reshape(normalisedX.shape[0], 1)
+
+def normaliseMinMax(maxX, minX, mu):
+    denom = float(maxX) - float(minX)
+    def nminMax(X):
+        return (X - mu)/denom
+    return nminMax
+
+def normaliseSTD(mu, sigma):
+    def nstd(X):
+        return (X - mu) / sigma
+    return nstd
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage = sys.argv[0] + \
        " Perform Linear Regression.")
@@ -217,11 +227,12 @@ if __name__ == "__main__":
     rgMale = linReg(np.asarray(dfMale), normalisation=linReg.STD, alpha=0.5)
 
     costs = rgMale.runRegression(20, costs=True)
-    print("costs are:\n%s" % costs)
-    #for i in range(0, len(costs)):
-    #    print("cost[%d] is: %f" % (i, costs[i]))
-    #print("theta = %s" % str(rgMale.theta))
-    #rgMale.plotBestFit()
+    for i in range(0, len(costs)):
+        print("cost[%d] is: %f" % (i, costs[i]))
+    print("theta = %s" % str(rgMale.theta))
+    XEg = np.array([70, 63]).reshape(1, 2)
+    x = rgMale.predict(XEg)
+    print("x predicted is:\n%s" % x)
     #dfMale = dfMale.drop(["Mother"], axis=1)
     #rgMale = linReg(np.asarray(dfMale))
     #rgMale.plotRegression(2000)
