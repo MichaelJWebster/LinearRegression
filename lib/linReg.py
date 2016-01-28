@@ -46,7 +46,7 @@ class linReg(object):
     # The number of features in the data set
     nFeatures = None
 
-    def __init__(self, tSet, normalisation = MINMAX, alpha = 0.01, lbda=0.0):
+    def __init__(self, tSet, normalisation = MINMAX, alpha = 1.0, lbda=0.0):
         """
         Construct the linear regression object by splitting tSet into nFeatures
         columns in X, and 1 column in Y. Normalise X according to the
@@ -67,10 +67,11 @@ class linReg(object):
         self.XOrg = np.copy(self.X)        
         self.Y = tSet[0:, -1:].astype(float)
         self.normaliseFeatures()
-        #ones = np.ones(len(tSet)).reshape(len(tSet),1)
-        #self.X = np.append(ones, self.X, axis=1)
-        #self.m, self.nFeatures = self.X.shape
-        #self.theta = np.ones((self.nFeatures, 1), dtype=np.float)
+        ones = np.ones(len(tSet)).reshape(len(tSet),1)
+        self.X = np.append(ones, self.X, axis=1)
+        print("X with 0nes is:\n%s" % self.X)
+        self.m, self.nFeatures = self.X.shape
+        self.theta = np.ones((self.nFeatures, 1), dtype=np.float)
 
     def normaliseFeatures(self):
         """
@@ -126,8 +127,73 @@ class linReg(object):
         """
         mu = X.mean(0)
         sigma = X.std(0)
-        return (X - mu)/sigma
+        rval = (X - mu)/sigma
+        return rval
 
+    @staticmethod
+    def costFn(theta, X, Y):
+        """
+        Return the value of J(Theta) at X, Y.
+        
+        Args:
+            theta:  The theta vector to run through the cost function.
+            X:      An array or matrix of features.
+            Y:      The actual observed values for Y.
+
+        Returns:
+            The cost for the particular theta.
+        """
+        lenX, _ = Y.shape
+        yh = X.dot(theta).reshape(X.shape[0], 1)
+        diff_vector = yh - Y
+        cost_val = (np.square(diff_vector)).sum() / float(2 * lenX)
+        return cost_val
+    
+    @staticmethod
+    def regLinRegGrad(X, Y, theta, alpha, lbda):
+        # grad is the same shape as theta.
+        m = X.shape[0]
+        theta = theta.reshape(max(theta.shape), 1)
+        grad = np.zeros((theta.shape), dtype=np.float)
+        #print("theta.shape is %s" % str(theta.shape))
+        h_theta = X.dot(theta)
+        grad[0] = (alpha/m) * ((h_theta - Y) * X[:, 0].reshape(X.shape[0],1)).sum()
+        print("grad[0] is: %f\n" % grad[0])
+        mainSum = ((h_theta - Y) * X[:, 1:]).sum(axis=0)
+        print("mainSum is: %s\n" % mainSum)
+        mainSum = mainSum.reshape(mainSum.shape[0], 1)
+        print("mainSum2 is: %s\n" % mainSum)
+        grad[1:] = ((alpha/m) * (mainSum + lbda * theta[1:]))
+        print("grad is: %s\n" % grad);
+        return grad
+    
+    def updateHyp(self):
+        """
+        Update the hypothesis by calculating new theta values.
+        """
+        grad = linReg.regLinRegGrad(self.X, self.Y, self.theta, self.alpha, self.lbda)
+        self.theta = self.theta - grad
+    
+    def runRegression(self, numIters, costs=False):
+        """
+        Run the regression, and return costs if requested.
+        
+        Args:
+            numIters:  The number of times to iterate.
+            costs:     Record costs, and return them.
+        Returns:
+        An array containing costs if costs is True, otherwise None;
+        """
+        i = 0
+        costVals = None
+        if costs:
+            costVals = np.zeros(numIters)
+        while i < numIters:
+            self.updateHyp()
+            if costs:
+                costVals[i] = linReg.costFn(self.theta, self.X, self.Y)
+            i += 1
+        return costVals
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage = sys.argv[0] + \
@@ -148,7 +214,18 @@ if __name__ == "__main__":
     df = pd.read_csv(aDfile)
     df = df[["Father", "Mother", "Gender", "Height"]]
     dfMale = df[df["Gender"] == "M"].drop(["Gender"], axis=1)
-    rgMale = linReg(np.asarray(dfMale), normalisation=linReg.MINMAX, alpha=1.0)
-    #print("X is:\n %s" % rgMale.X)
+    rgMale = linReg(np.asarray(dfMale), normalisation=linReg.STD, alpha=0.5)
+
+    costs = rgMale.runRegression(20, costs=True)
+    print("costs are:\n%s" % costs)
+    #for i in range(0, len(costs)):
+    #    print("cost[%d] is: %f" % (i, costs[i]))
+    #print("theta = %s" % str(rgMale.theta))
+    #rgMale.plotBestFit()
+    #dfMale = dfMale.drop(["Mother"], axis=1)
+    #rgMale = linReg(np.asarray(dfMale))
+    #rgMale.plotRegression(2000)
+    #print("theta = %s" % str(rgMale.theta))
+    #rgMale.plotBestFit()    
     sys.exit(0)
         
